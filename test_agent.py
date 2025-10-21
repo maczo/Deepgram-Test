@@ -4,10 +4,9 @@ import time
 import threading
 from deepgram import (
     DeepgramClient,
+    DeepgramClientOptions,
     AgentWebSocketEvents,
-    AgentKeepAlive,
-    SettingsOptions,
-    Speak
+    SettingsConfigurationOptions,
 )
 
 # Load keys from env
@@ -18,11 +17,13 @@ if not DEEPGRAM_API_KEY or not OPENROUTER_API_KEY:
     print("Error: Missing DEEPGRAM_API_KEY or OPENROUTER_API_KEY in env vars.")
     exit(1)
 
-deepgram = DeepgramClient(DEEPGRAM_API_KEY, {"keepalive": "true"})
-connection = deepgram.agent.v1.connect()
+# Initialize client with keepalive
+config = DeepgramClientOptions(options={"keepalive": "true"})
+deepgram = DeepgramClient(DEEPGRAM_API_KEY, config)
+connection = deepgram.agent.v("1").connect()
 
-# Configure settings (SIP-compatible: mulaw/8kHz)
-options = SettingsOptions()
+# Configure settings using SettingsConfigurationOptions
+options = SettingsConfigurationOptions()
 options.audio.input.encoding = "mulaw"
 options.audio.input.sample_rate = 8000
 options.audio.output.encoding = "mulaw"
@@ -51,33 +52,48 @@ def send_keep_alive():
     while True:
         time.sleep(5)
         print("Sending keep-alive...")
-        connection.send(str(AgentKeepAlive()))
+        try:
+            connection.keep_alive()
+        except Exception as e:
+            print(f"Keep-alive error: {e}")
 
 keep_alive_thread = threading.Thread(target=send_keep_alive, daemon=True)
 keep_alive_thread.start()
 
 # Event handlers (logs to console)
-def on_audio_data(_, data, **kwargs):
+def on_binary_data(self, data, **kwargs):
     print(f"AI speaking: {len(data)} bytes of TTS audio received!")
 
-def on_conversation_text(_, text, **kwargs):
+def on_conversation_text(self, text, **kwargs):
     print(f"Chat transcript: {text}")
 
-def on_user_started_speaking(_, **kwargs):
+def on_user_started_speaking(self, **kwargs):
     print("User started speaking—listening!")
 
-def on_error(_, error, **kwargs):
+def on_error(self, error, **kwargs):
     print(f"Error: {error}")
 
-def on_close(_, **kwargs):
+def on_close(self, **kwargs):
     print("Connection closed.")
 
+def on_open(self, open, **kwargs):
+    print("Connection opened!")
+
+def on_welcome(self, welcome, **kwargs):
+    print(f"Welcome received: {welcome}")
+
+def on_settings_applied(self, settings_applied, **kwargs):
+    print(f"Settings applied: {settings_applied}")
+
 # Register events
-connection.on(AgentWebSocketEvents.AudioData, on_audio_data)
+connection.on(AgentWebSocketEvents.BinaryData, on_binary_data)
 connection.on(AgentWebSocketEvents.ConversationText, on_conversation_text)
 connection.on(AgentWebSocketEvents.UserStartedSpeaking, on_user_started_speaking)
 connection.on(AgentWebSocketEvents.Error, on_error)
 connection.on(AgentWebSocketEvents.Close, on_close)
+connection.on(AgentWebSocketEvents.Open, on_open)
+connection.on(AgentWebSocketEvents.Welcome, on_welcome)
+connection.on(AgentWebSocketEvents.SettingsApplied, on_settings_applied)
 
 # Start connection with options
 if not connection.start(options):
