@@ -47,11 +47,7 @@ keep_alive_thread = threading.Thread(target=send_keep_alive, daemon=True)
 keep_alive_thread.start()
 
 # Event handlers (logs to console)
-audio_buffer = bytearray()
-
 def on_audio_data(_, data, **kwargs):
-    nonlocal audio_buffer
-    audio_buffer.extend(data)
     print(f"AI speaking: {len(data)} bytes of TTS audio received!")
 
 def on_conversation_text(_, text, **kwargs):
