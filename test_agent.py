@@ -2,10 +2,13 @@ import os
 import requests
 import time
 import threading
-from deepgram import DeepgramClient
-from deepgram.clients.agent.v1.websocket import AgentWebSocketEvents
-from deepgram.clients.agent.v1.websocket.messages import AgentKeepAlive
-from deepgram.clients.agent.v1.websocket.options import SettingsOptions
+from deepgram import (
+    DeepgramClient,
+    AgentWebSocketEvents,
+    AgentKeepAlive,
+    SettingsOptions,
+    Speak
+)
 
 # Load keys from env
 DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
@@ -28,14 +31,19 @@ options.audio.output.container = "none"
 options.agent.language = "en"
 options.agent.listen.provider.type = "deepgram"
 options.agent.listen.provider.model = "nova-3"
+
 # OpenRouter as custom OpenAI-compatible LLM
 options.agent.think.provider.type = "open_ai"
-options.agent.think.provider.model = "anthropic/claude-3.5-sonnet"  # Your flexible model
-options.agent.think.endpoint = "https://openrouter.ai/api/v1/chat/completions"  # Custom endpoint
+options.agent.think.provider.model = "anthropic/claude-3.5-sonnet"
+options.agent.think.endpoint = "https://openrouter.ai/api/v1/chat/completions"
 options.agent.think.headers = {"Authorization": f"Bearer {OPENROUTER_API_KEY}"}
 options.agent.think.prompt = "You are a friendly phone assistant. Respond concisely and naturally to voice queries."
+
+# Configure TTS with Deepgram
 options.agent.speak.provider.type = "deepgram"
 options.agent.speak.provider.model = "aura-2-thalia-en"
+
+# Set greeting
 options.agent.greeting = "Hello! This is a Deepgram test. I'll respond to what you say."
 
 # Keep-alive thread
