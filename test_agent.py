@@ -4,7 +4,6 @@ import time
 import threading
 from deepgram import (
     DeepgramClient,
-    DeepgramClientOptions,
     AgentWebSocketEvents,
     SettingsConfigurationOptions,
 )
